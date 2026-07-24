@@ -6,6 +6,24 @@ All notable changes to this project will be documented in this file. The format 
 
 ## [Unreleased]
 
+A follow-up audit fanned twelve expert lenses across the tree and adversarially verified every finding against a real build. These are the confirmed fixes.
+
+### Fixed
+
+- **`mdpress build --format typst` no longer fails to compile on an escaped dollar.** The prose escaper handled `$ # @ < >` and backticks but not the backslash, so the spec-valid CommonMark escape `\$` (the standard way to write a literal dollar) became `\\$` — Typst read that as a literal backslash plus an unclosed math delimiter and aborted the entire document with `error: unclosed delimiter`. A backslash before a backtick broke the same way. Backslashes are now escaped first, so `\$` compiles cleanly; the same source already built via `--format pdf`
+- **A declared `author` survives the standard GitBook layout.** In a `book.json` + `SUMMARY.md` project the README/git-inferred author overwrote the `author` a user wrote in `book.json`, so the cover and metadata showed the GitHub org or username instead — the same defaults-as-unset bug already fixed for `version` and `language`, which `author` had been missed by. The override is now guarded the same way
+- **`mdpress migrate` no longer aborts on a `book.json` whose `author` is an array.** GitBook permits `author` to be a string or an array of strings (mdpress's own build loader accepts both); migrate decoded it as a plain string, so the array form failed `json.Unmarshal` and the whole migration bailed out before writing `book.yaml`. It now accepts both and joins multiple authors
+- **A Typst thematic break renders as a rule, not an em dash.** A Markdown `---`/`***`/`___` divider was emitted to Typst verbatim, where smart-punctuation turned `---` into a stray em-dash paragraph; it now emits an explicit `#line(length: 100%)`
+
+### Changed
+
+- **The generated site localizes its accessibility labels.** The skip link and the `aria-label`s a screen reader announces for the first controls a keyboard user reaches (navigation toggle, breadcrumb, page navigation) were hardcoded English even on a fully translated `zh`/`ja` site; they now track `book.language` through the existing UI-string table
+- **The release workflow defaults its token to read-only.** The top-level `GITHUB_TOKEN` granted `contents: write` + `packages: write` to every job, including the read-only preflight; it now defaults to `contents: read` and each publishing job (goreleaser, docker) elevates its own scope
+
+### Documentation
+
+- Corrected four documentation-vs-implementation drifts (in both the English and Chinese copies): `doctor` honors `--config` (it was listed as ignoring it); the PDF `output.margin_*` keys inherit `style.margin` rather than having fixed `15mm`/`20mm` defaults; the `doctor` PlantUML check output description (a phantom "not needed" console line and non-existent report fields); and the `static/` note, which listed `.nojekyll` and `robots.txt` as files mdPress "does not generate" when it generates both by default
+
 ---
 
 ## [0.8.2] - 2026-07-24
