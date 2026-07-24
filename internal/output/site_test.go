@@ -68,6 +68,45 @@ func TestSiteGeneratorIndexPage(t *testing.T) {
 	}
 }
 
+// TestSiteAccessibilityStringsAreLocalized pins that the accessibility layer —
+// the skip link and the aria-labels a screen reader announces for the first
+// controls a keyboard user reaches — tracks book.language like the rest of the
+// UI, instead of staying hardcoded English on a translated site.
+func TestSiteAccessibilityStringsAreLocalized(t *testing.T) {
+	render := func(t *testing.T, lang string) string {
+		t.Helper()
+		dir := t.TempDir()
+		gen := NewSiteGenerator(SiteMeta{Title: "手册", Author: "作者", Language: lang})
+		gen.AddChapter(SiteChapter{Title: "第一章", ID: "ch1", Filename: "ch1.html", Content: "<h1>第一章</h1>"})
+		if err := gen.Generate(dir); err != nil {
+			t.Fatalf("Generate(%s): %v", lang, err)
+		}
+		data, err := os.ReadFile(filepath.Join(dir, "index.html"))
+		if err != nil {
+			t.Fatalf("read index.html: %v", err)
+		}
+		return string(data)
+	}
+
+	zh := render(t, "zh-CN")
+	for _, want := range []string{"跳到正文", "切换导航菜单"} {
+		if !strings.Contains(zh, want) {
+			t.Errorf("zh site is missing localized a11y label %q", want)
+		}
+	}
+	if strings.Contains(zh, "Skip to content") {
+		t.Error("zh site still contains the hardcoded English skip link")
+	}
+
+	// English keeps the original wording.
+	en := render(t, "en-US")
+	for _, want := range []string{"Skip to content", `aria-label="Toggle navigation menu"`} {
+		if !strings.Contains(en, want) {
+			t.Errorf("en site is missing a11y label %q", want)
+		}
+	}
+}
+
 // TestSiteGeneratorPrevNextNavigation creates 3 chapters and verifies each page has correct prev/next links.
 func TestSiteGeneratorPrevNextNavigation(t *testing.T) {
 	dir := t.TempDir()

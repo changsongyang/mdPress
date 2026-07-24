@@ -1167,7 +1167,7 @@ var sitePageBody = `<script>
 </script>
 </head>
 <body>
-  <a href="#main-content" class="skip-link">Skip to content</a>
+  <a href="#main-content" class="skip-link">{{.UIskipToContent}}</a>
 
   <div class="search-backdrop" id="search-backdrop"></div>
   <div class="search-inline" id="search-overlay" role="search" aria-label="{{.UIsearchButton}}">
@@ -1190,7 +1190,7 @@ var sitePageBody = `<script>
   <div class="route-progress" id="route-progress" aria-hidden="true">
     <div class="route-progress-bar"></div>
   </div>
-  <button class="sidebar-toggle" aria-label="Toggle navigation menu" aria-controls="sidebar-nav" aria-expanded="false">
+  <button class="sidebar-toggle" aria-label="{{.UInavToggle}}" aria-controls="sidebar-nav" aria-expanded="false">
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <line x1="3" y1="6" x2="21" y2="6"></line>
       <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -1221,7 +1221,7 @@ var sitePageBody = `<script>
 
   <main class="main">
     <header class="page-header">
-      <nav class="page-breadcrumb" aria-label="Breadcrumb">
+      <nav class="page-breadcrumb" aria-label="{{.UIbreadcrumb}}">
         <a href="{{.HomeLink}}">{{.SiteTitle}}</a>
         {{range .Breadcrumbs}}<span class="bc-sep">›</span><a href="{{.Filename}}">{{.Title}}</a>{{end}}
       </nav>
@@ -1243,7 +1243,7 @@ var sitePageBody = `<script>
         {{if .ShowTitle}}<h1>{{.PageTitle}}</h1>{{end}}
         {{safeHTML .Content}}
 
-        <nav class="page-nav" aria-label="Page navigation">
+        <nav class="page-nav" aria-label="{{.UIpageNavigation}}">
           {{if .PrevLink}}<a class="prev" href="{{.PrevLink}}"><span class="nav-label">{{.UIprevious}}</span><span class="nav-title">{{.PrevTitle}}</span></a>{{else}}<span></span>{{end}}
           {{if .NextLink}}<a class="next" href="{{.NextLink}}"><span class="nav-label">{{.UInext}}</span><span class="nav-title">{{.NextTitle}}</span></a>{{else}}<span></span>{{end}}
         </nav>

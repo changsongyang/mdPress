@@ -542,6 +542,12 @@ type pageData struct {
 	UIsearchKbd         string
 	UIpageOf            string
 	UIbuiltWith         string
+	// Accessibility labels: the skip link and the aria-labels a screen reader
+	// announces for the first controls a keyboard user reaches.
+	UIskipToContent  string
+	UInavToggle      string
+	UIbreadcrumb     string
+	UIpageNavigation string
 	// Shown in place of a diagram or formula when its third-party library
 	// could not be fetched (offline reader, blocked CDN, failed SRI check).
 	UIassetsMermaidFailed string

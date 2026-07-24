@@ -42,6 +42,10 @@ var uiStrings = map[string]map[string]string{
 		"search_kbd":            "Ctrl/⌘ K",
 		"page_of":               "第 %d 页，共 %d 页",
 		"built_with":            "使用 %s 构建",
+		"skip_to_content":       "跳到正文",
+		"nav_toggle":            "切换导航菜单",
+		"breadcrumb":            "面包屑导航",
+		"page_navigation":       "翻页导航",
 		"assets_mermaid_failed": "图表未渲染：无法加载 Mermaid 库（可能处于离线状态或该 CDN 被拦截），以下为图表源码。",
 		"assets_katex_failed":   "本页部分公式未渲染：无法加载 KaTeX 库（可能处于离线状态或该 CDN 被拦截），公式以 LaTeX 源码形式显示。",
 	},
@@ -76,6 +80,10 @@ var uiStrings = map[string]map[string]string{
 		"search_kbd":            "Ctrl/⌘ K",
 		"page_of":               "%d / %d ページ",
 		"built_with":            "%s で構築",
+		"skip_to_content":       "本文へスキップ",
+		"nav_toggle":            "ナビゲーションメニューを切り替え",
+		"breadcrumb":            "パンくずリスト",
+		"page_navigation":       "ページナビゲーション",
 		"assets_mermaid_failed": "図は描画されていません：Mermaid ライブラリを読み込めませんでした（オフラインまたは CDN がブロックされています）。以下はソースです。",
 		"assets_katex_failed":   "このページの一部の数式は描画されていません：KaTeX ライブラリを読み込めませんでした（オフラインまたは CDN がブロックされています）。数式は LaTeX ソースのまま表示されます。",
 	},
@@ -111,6 +119,10 @@ var uiStrings = map[string]map[string]string{
 		"search_kbd":            "Ctrl/⌘ K",
 		"page_of":               "Page %d of %d",
 		"built_with":            "Built with %s",
+		"skip_to_content":       "Skip to content",
+		"nav_toggle":            "Toggle navigation menu",
+		"breadcrumb":            "Breadcrumb",
+		"page_navigation":       "Page navigation",
 		"assets_mermaid_failed": "Diagram not rendered: the Mermaid library could not be loaded (offline, or the CDN is blocked). Its source is shown below.",
 		"assets_katex_failed":   "Some formulas on this page are not rendered: the KaTeX library could not be loaded (offline, or the CDN is blocked). They are shown as LaTeX source.",
 	},
@@ -175,6 +187,10 @@ func populateUIStrings(d *pageData) {
 	d.UIsearchKbd = uiString(lang, "search_kbd")
 	d.UIpageOf = uiString(lang, "page_of")
 	d.UIbuiltWith = uiString(lang, "built_with")
+	d.UIskipToContent = uiString(lang, "skip_to_content")
+	d.UInavToggle = uiString(lang, "nav_toggle")
+	d.UIbreadcrumb = uiString(lang, "breadcrumb")
+	d.UIpageNavigation = uiString(lang, "page_navigation")
 	d.UIassetsMermaidFailed = uiString(lang, "assets_mermaid_failed")
 	d.UIassetsKatexFailed = uiString(lang, "assets_katex_failed")
 }
