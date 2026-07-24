@@ -78,7 +78,7 @@ These flags appear in `--help` output for most commands.
 Notes:
 
 - If `--quiet` and `--verbose` are both set, the current implementation gives precedence to `--quiet`.
-- `--config` is a global flag, but not every command actually uses it. `doctor`, `themes`, and `completion` currently ignore it.
+- `--config` is a global flag, but not every command actually uses it. `themes` and `completion` currently ignore it.
 
 ## Input Source Rules
 
@@ -136,12 +136,14 @@ Any GitHub personal access token or fine-grained token with `contents:read` scop
 
 ### PDF Margins
 
+Each margin is unset by default and inherits `style.margin` (which the active theme sets — for example `technical` uses 20mm, `minimal` 30mm). Set one to override just that side.
+
 | Setting | Default | Description |
 | --- | --- | --- |
-| `output.margin_top` | `15mm` | Top page margin. Examples: `"20mm"`, `"0.8in"`, `"2cm"`. |
-| `output.margin_bottom` | `15mm` | Bottom page margin. |
-| `output.margin_left` | `20mm` | Left page margin. |
-| `output.margin_right` | `20mm` | Right page margin. |
+| `output.margin_top` | inherits `style.margin` | Top page margin. Examples: `"20mm"`, `"0.8in"`, `"2cm"`. |
+| `output.margin_bottom` | inherits `style.margin` | Bottom page margin. |
+| `output.margin_left` | inherits `style.margin` | Left page margin. |
+| `output.margin_right` | inherits `style.margin` | Right page margin. |
 
 ### PDF Bookmarks
 
@@ -163,9 +165,11 @@ Any GitHub personal access token or fine-grained token with `contents:read` scop
 | `book.copyright` | unset | Short notice rendered in each site page's footer, e.g. `© 2026 Acme Inc.`. |
 
 Anything in a `static/` directory beside `book.yaml` is copied verbatim into the site root.
-That is how a project ships `CNAME`, `.nojekyll`, a custom `robots.txt` or any other file
-mdPress does not generate. Do not place such files in `_book/` by hand — the next build
-replaces that directory atomically and destroys them.
+mdPress already generates `.nojekyll` and `robots.txt` on every site build; a file of the
+same name in `static/` overrides the generated one. Use `static/` to ship files mdPress does
+not generate — such as `CNAME` or an `_headers` file — or to replace a generated one. Do not
+place such files in `_book/` by hand — the next build replaces that directory atomically and
+destroys them.
 
 ### Markdown and Variables
 

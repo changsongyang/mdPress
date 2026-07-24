@@ -162,8 +162,9 @@ plugins:
 ## `static/` 目录
 
 它不是 `book.yaml` 的键，而是项目布局的一部分：与 `book.yaml` 并列的 `static/` 目录中的
-内容会被原样复制到 `site` 输出的根目录。项目就是靠它来携带 mdPress 不会生成的文件 ——
-`CNAME`、`.nojekyll`、自定义的 `robots.txt`、`_headers` 等：
+内容会被原样复制到 `site` 输出的根目录。mdPress 已经会生成 `.nojekyll` 和 `robots.txt`；
+`static/` 中同名文件会覆盖生成的版本。用它来携带 mdPress 不会生成的文件（如 `CNAME`、
+`_headers`），或替换某个已生成的文件：
 
 ```
 book.yaml

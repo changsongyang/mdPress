@@ -78,7 +78,7 @@ flowchart TD
 注意：
 
 - 如果同时传入 `--quiet` 和 `--verbose`，当前实现以 `--quiet` 为准。
-- `--config` 虽然是全局参数，但并不是每个命令都会真正使用它。`doctor`、`themes`、`completion` 等命令当前不会按这个参数切换配置文件。
+- `--config` 虽然是全局参数，但并不是每个命令都会真正使用它。`themes`、`completion` 等命令当前不会按这个参数切换配置文件。
 
 ## 输入源规则
 
@@ -136,12 +136,14 @@ Token 不会被嵌入 clone URL。mdPress 始终 clone 普通的 `https://github
 
 ### PDF 页边距
 
+每个边距默认未设置，继承 `style.margin`（由当前主题决定 —— 例如 `technical` 为 20mm，`minimal` 为 30mm）。设置某一项即可只覆盖那一侧。
+
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
-| `output.margin_top` | `15mm` | 页面上边距。示例：`"20mm"`、`"0.8in"`、`"2cm"`。 |
-| `output.margin_bottom` | `15mm` | 页面下边距。 |
-| `output.margin_left` | `20mm` | 页面左边距。 |
-| `output.margin_right` | `20mm` | 页面右边距。 |
+| `output.margin_top` | 继承 `style.margin` | 页面上边距。示例：`"20mm"`、`"0.8in"`、`"2cm"`。 |
+| `output.margin_bottom` | 继承 `style.margin` | 页面下边距。 |
+| `output.margin_left` | 继承 `style.margin` | 页面左边距。 |
+| `output.margin_right` | 继承 `style.margin` | 页面右边距。 |
 
 ### PDF 书签
 
@@ -162,8 +164,9 @@ Token 不会被嵌入 clone URL。mdPress 始终 clone 普通的 `https://github
 | `book.logo` | 未设置 | 站点侧边栏标题上方的图片。 |
 | `book.copyright` | 未设置 | 渲染在每个站点页面页脚的简短声明，如 `© 2026 Acme Inc.`。 |
 
-与 `book.yaml` 并列的 `static/` 目录中的内容会被原样复制到站点根目录。项目就是靠它来携带
-`CNAME`、`.nojekyll`、自定义的 `robots.txt` 以及其他 mdPress 不会生成的文件。不要手工把这类
+与 `book.yaml` 并列的 `static/` 目录中的内容会被原样复制到站点根目录。mdPress 每次构建站点时
+都会生成 `.nojekyll` 和 `robots.txt`；`static/` 中同名文件会覆盖生成的版本。用 `static/` 携带
+mdPress 不会生成的文件（如 `CNAME` 或 `_headers`），或替换某个已生成的文件。不要手工把这类
 文件放进 `_book/` —— 下一次构建会原子地替换那个目录并销毁它们。
 
 ### Markdown 与变量

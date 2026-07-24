@@ -25,7 +25,6 @@ This is the full output on a healthy machine and a scaffolded project:
   ✓ Network connectivity to github.com available
   ✓ Disk space available
   ✓ CJK fonts available: (system CJK fonts detected)
-  ✓ PlantUML not needed (no diagrams detected)
 
 
   Project Check
@@ -53,7 +52,7 @@ This is the full output on a healthy machine and a scaffolded project:
 | Network connectivity | A reachability probe against github.com, for remote sources |
 | Disk space | Free space in the output directory |
 | CJK fonts | Needed for Chinese/Japanese/Korean text in PDF output |
-| PlantUML | Reported only as "not needed" when the project contains no PlantUML fences |
+| PlantUML | Printed only as a warning when the project contains PlantUML fences (they publish as plain code blocks); silent otherwise |
 | Plugins | Each entry under `plugins:` in `book.yaml` must exist and be executable |
 | book.yaml / SUMMARY.md / LANGS.md | Which project files are present |
 | Config loads | Whether `config.Load` (or auto-discovery from `SUMMARY.md`) succeeds |
@@ -200,8 +199,7 @@ jq -r '.unresolved_markdown_links[]? | "\(.Source) -> \(.Target)"' report.json
 - Network connectivity: true
 - Disk space available: 62.71 GB
 - Disk space OK: true
-- PlantUML needed: false
-- PlantUML available: false
+- PlantUML blocks present (published as plain code): false
 - Plugins valid: true
 - book.yaml found: true
 - SUMMARY.md found: false

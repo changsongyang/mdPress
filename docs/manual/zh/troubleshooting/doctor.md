@@ -25,7 +25,6 @@ mdpress doctor /path/to/book   # 检查其他目录
   ✓ Network connectivity to github.com available
   ✓ Disk space available
   ✓ CJK fonts available: (system CJK fonts detected)
-  ✓ PlantUML not needed (no diagrams detected)
 
 
   Project Check
@@ -53,7 +52,7 @@ mdpress doctor /path/to/book   # 检查其他目录
 | Network connectivity | 针对 github.com 的可达性探测，用于远程源 |
 | Disk space | 输出目录所在分区的可用空间 |
 | CJK fonts | PDF 输出中的中日韩文字需要 |
-| PlantUML | 项目中没有 PlantUML 围栏时只报告 "not needed" |
+| PlantUML | 仅当项目包含 PlantUML 围栏时以警告形式报告（这些围栏会以纯代码块形式发布）；否则不输出 |
 | Plugins | `book.yaml` 中 `plugins:` 的每一项都必须存在且可执行 |
 | book.yaml / SUMMARY.md / LANGS.md | 项目中存在哪些文件 |
 | Config loads | `config.Load`（或基于 `SUMMARY.md` 的自动发现）是否成功 |
@@ -200,8 +199,7 @@ jq -r '.unresolved_markdown_links[]? | "\(.Source) -> \(.Target)"' report.json
 - Network connectivity: true
 - Disk space available: 62.71 GB
 - Disk space OK: true
-- PlantUML needed: false
-- PlantUML available: false
+- PlantUML blocks present (published as plain code): false
 - Plugins valid: true
 - book.yaml found: true
 - SUMMARY.md found: false

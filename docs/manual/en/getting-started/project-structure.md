@@ -113,14 +113,16 @@ mdPress automatically processes images and optimizes them for web output.
 ## The `static/` Directory
 
 Everything inside `static/` is copied verbatim into the root of the `site` output, keeping
-its name and its subdirectory layout. It is how a project ships files mdPress does not
-generate:
+its name and its subdirectory layout. Use it to ship files mdPress does not generate (such as
+`CNAME` or `_headers`), or to override one it does — mdPress generates `.nojekyll` and
+`robots.txt` on every site build, and a same-named file in `static/` replaces the generated
+one:
 
 ```
 static/
 ├── CNAME          -> _book/CNAME
-├── .nojekyll      -> _book/.nojekyll
-└── robots.txt     -> _book/robots.txt   (replaces the generated one)
+├── .nojekyll      -> _book/.nojekyll      (replaces the generated one)
+└── robots.txt     -> _book/robots.txt     (replaces the generated one)
 ```
 
 Do not place such files in `_book/` by hand instead. The build replaces that directory

@@ -165,9 +165,10 @@ plugins:
 ## The `static/` Directory
 
 Not a `book.yaml` key, but part of the project layout: anything in a `static/` directory
-beside `book.yaml` is copied verbatim into the root of the `site` output. That is how a
-project ships files mdPress does not generate — `CNAME`, `.nojekyll`, a custom
-`robots.txt`, an `_headers` file:
+beside `book.yaml` is copied verbatim into the root of the `site` output. mdPress already
+generates `.nojekyll` and `robots.txt`; a file of the same name in `static/` overrides the
+generated one. Use `static/` to ship files mdPress does not generate — `CNAME`, an
+`_headers` file — or to replace a generated one:
 
 ```
 book.yaml
