@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/yeasy/mdpress/internal/colorutil"
 	"github.com/yeasy/mdpress/internal/markdown"
 	"github.com/yeasy/mdpress/internal/theme"
 	"github.com/yeasy/mdpress/pkg/utils"
@@ -716,7 +717,7 @@ func (g *EpubGenerator) generateCoverPage(coverAsset *epubAsset) string {
 	metaColor := "rgba(255, 255, 255, 0.9)"
 	versionColor := "rgba(255, 255, 255, 0.7)"
 	imageShadow := "0 18px 50px rgba(0, 0, 0, 0.45)"
-	if epubIsLightColor(bg) {
+	if colorutil.IsLight(bg) {
 		titleColor = "#14304a"
 		subtitleColor = "#475569"
 		metaColor = "#334155"
@@ -828,60 +829,14 @@ func epubBodyStartsWithH1(body string) bool {
 // background.
 const epubDefaultCoverBg = "#102a43"
 
-// epubCSSColorPattern matches safe CSS color values (hex, rgb[a], hsl[a],
-// named colors) — the same validation internal/cover applies to
-// book.cover.background.
-var epubCSSColorPattern = regexp.MustCompile(`^(?i)(?:#[0-9a-f]{3,8}|(?:rgb|rgba|hsl|hsla)\([\d\s,%.]+\)|[a-z]{1,30})$`)
-
 // epubCoverBackground returns the configured cover background when it is a
 // safe CSS color value, otherwise the default navy.
 func epubCoverBackground(configured string) string {
 	configured = strings.TrimSpace(configured)
-	if configured != "" && epubCSSColorPattern.MatchString(configured) {
+	if colorutil.IsSafeColor(configured) {
 		return configured
 	}
 	return epubDefaultCoverBg
-}
-
-// epubIsLightColor reports whether a CSS color is perceptually light. Only hex
-// colors (#rgb, #rgba, #rrggbb, #rrggbbaa) are analyzed; all other formats are
-// assumed dark so light text is the safer default. Same heuristic as
-// internal/cover (ITU-R BT.601 luminance, cutoff 186).
-func epubIsLightColor(color string) bool {
-	color = strings.TrimSpace(color)
-	if !strings.HasPrefix(color, "#") {
-		return false
-	}
-	hex := color[1:]
-	// Expand shorthand (#rgb -> #rrggbb, #rgba -> #rrggbb).
-	if len(hex) == 3 || len(hex) == 4 {
-		hex = string([]byte{hex[0], hex[0], hex[1], hex[1], hex[2], hex[2]})
-	}
-	// Strip alpha channel from #rrggbbaa.
-	if len(hex) == 8 {
-		hex = hex[:6]
-	}
-	if len(hex) < 6 {
-		return false
-	}
-	r := epubHexVal(hex[0])*16 + epubHexVal(hex[1])
-	g := epubHexVal(hex[2])*16 + epubHexVal(hex[3])
-	b := epubHexVal(hex[4])*16 + epubHexVal(hex[5])
-	luminance := 0.299*float64(r) + 0.587*float64(g) + 0.114*float64(b)
-	return luminance > 186
-}
-
-func epubHexVal(c byte) int {
-	switch {
-	case c >= '0' && c <= '9':
-		return int(c - '0')
-	case c >= 'a' && c <= 'f':
-		return int(c-'a') + 10
-	case c >= 'A' && c <= 'F':
-		return int(c-'A') + 10
-	default:
-		return 0
-	}
 }
 
 // epubMonoFontFamily is the monospace stack used for code in EPUB output.

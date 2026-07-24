@@ -1296,6 +1296,26 @@ func TestEpubCoverPageHonorsConfiguredBackground(t *testing.T) {
 	}
 }
 
+// TestEpubCoverPageLightNamedAndRGBBackgrounds pins the fix for the ePub cover
+// luminance check: it used to understand only #hex and classify every other
+// value as dark, so a light named or rgb() background (which epubCoverBackground
+// accepts) rendered near-white ink on a near-white cover. The shared
+// colorutil.IsLight now classifies these correctly.
+func TestEpubCoverPageLightNamedAndRGBBackgrounds(t *testing.T) {
+	for _, bg := range []string{"white", "ivory", "rgb(255, 255, 255)"} {
+		t.Run(bg, func(t *testing.T) {
+			gen := NewEpubGenerator(EpubMeta{Title: "Light Book", CoverBackground: bg})
+			page := gen.generateCoverPage(nil)
+			if !strings.Contains(page, "color: #14304a") {
+				t.Errorf("background %q: expected dark ink #14304a on a light background, got: %s", bg, page)
+			}
+			if strings.Contains(page, "color: #f6f8fc") {
+				t.Errorf("background %q: near-white ink #f6f8fc rendered on a light background (illegible)", bg)
+			}
+		})
+	}
+}
+
 // TestEpubCoverPageRejectsUnsafeBackground verifies that a background value
 // failing CSS color validation falls back to the navy default.
 func TestEpubCoverPageRejectsUnsafeBackground(t *testing.T) {

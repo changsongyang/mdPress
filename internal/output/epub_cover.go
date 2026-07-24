@@ -11,6 +11,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/yeasy/mdpress/internal/colorutil"
 	"github.com/yeasy/mdpress/pkg/utils"
 )
 
@@ -38,7 +39,7 @@ func (g *EpubGenerator) renderCoverSVG() string {
 	bg := epubCoverBackground(g.meta.CoverBackground)
 	// Same adaptive ink choice as the generated title page.
 	title, secondary, rule := "#f6f8fc", "rgba(255,255,255,0.82)", "rgba(255,255,255,0.35)"
-	if epubIsLightColor(bg) {
+	if colorutil.IsLight(bg) {
 		title, secondary, rule = "#14304a", "#475569", "rgba(20,48,74,0.30)"
 	}
 
