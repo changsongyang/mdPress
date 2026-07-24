@@ -71,7 +71,7 @@ func init() {
 type gitBookConfig struct {
 	Title       string         `json:"title"`
 	Description string         `json:"description"`
-	Author      string         `json:"author"`
+	Author      gitBookAuthor  `json:"author"`
 	Language    string         `json:"language"`
 	Plugins     []string       `json:"plugins"`
 	GitBook     string         `json:"gitbook"`
@@ -80,6 +80,32 @@ type gitBookConfig struct {
 	Styles      map[string]any `json:"styles"`
 	Variables   map[string]any `json:"variables"`
 }
+
+// gitBookAuthor decodes book.json's `author`, which GitBook permits to be
+// either a single string or an array of strings. Decoding it as a plain string
+// made json.Unmarshal fail on the array form and aborted the entire migration
+// before any book.yaml was written — even though mdpress's own build-path
+// loader accepts both (internal/config.jsonStringOrSlice).
+type gitBookAuthor []string
+
+func (a *gitBookAuthor) UnmarshalJSON(data []byte) error {
+	// Try a plain string first.
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		*a = []string{s}
+		return nil
+	}
+	// Fall back to an array of strings.
+	var ss []string
+	if err := json.Unmarshal(data, &ss); err != nil {
+		return fmt.Errorf("author must be a string or an array of strings: %w", err)
+	}
+	*a = ss
+	return nil
+}
+
+// String joins multiple authors the same way the build-path loader does.
+func (a gitBookAuthor) String() string { return strings.Join(a, ", ") }
 
 // ---- Migration report ----
 
@@ -212,7 +238,7 @@ func migrateBookJSON(bookJSONPath, projectDir string, dryRun, force bool, report
 			"title": nonEmpty(gb.Title, config.DefaultBookTitle),
 			// No invented author: an empty value is honest and validate
 			// prompts for it, whereas "Unknown" silently ships on the cover.
-			"author":      gb.Author,
+			"author":      gb.Author.String(),
 			"language":    nonEmpty(gb.Language, "en"),
 			"description": gb.Description,
 		},

@@ -525,6 +525,30 @@ func TestMigrateBookJSON_EmptyJSON(t *testing.T) {
 	}
 }
 
+// TestMigrateBookJSON_ArrayAuthor pins the array-author bug: GitBook permits
+// `"author"` to be an array of strings, which mdpress's build-path loader
+// accepts, but migrate decoded it as a plain string and aborted the whole
+// migration on the array form. It must now migrate and join the authors.
+func TestMigrateBookJSON_ArrayAuthor(t *testing.T) {
+	dir := t.TempDir()
+	bookJSON := `{"title": "Team Book", "author": ["Jane Doe", "John Roe"]}`
+	if err := os.WriteFile(filepath.Join(dir, "book.json"), []byte(bookJSON), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := executeMigrate(dir, false, false); err != nil {
+		t.Fatalf("migration aborted on an array author: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "book.yaml"))
+	if err != nil {
+		t.Fatalf("book.yaml was not created: %v", err)
+	}
+	if content := string(data); !strings.Contains(content, "Jane Doe, John Roe") {
+		t.Errorf("expected joined author %q in book.yaml, got:\n%s", "Jane Doe, John Roe", content)
+	}
+}
+
 // TestMigrateMarkdownFiles_SkipsNonMarkdownFiles tests that .txt and other files are ignored.
 func TestMigrateMarkdownFiles_SkipsNonMarkdownFiles(t *testing.T) {
 	dir := t.TempDir()
