@@ -106,3 +106,37 @@ func TestContentSniffStillSetsLanguageWhenUndeclared(t *testing.T) {
 		t.Errorf("language = %q, want zh-CN sniffed from the README", cfg.Book.Language)
 	}
 }
+
+// TestBookJSONAuthorSurvivesReadmeInference pins the author bug: the README
+// author sniff (a git-remote owner or an `Author:` line) is inference, but the
+// SUMMARY.md branch of Discover overwrote a declared book.json author with it
+// unconditionally — unlike version and language, which are guarded by IsSet.
+func TestBookJSONAuthorSurvivesReadmeInference(t *testing.T) {
+	dir := writeGitBookProject(t,
+		`{"title": "Handbook", "author": "Jane Doe"}`,
+		"# Handbook\n\nAuthor: Somebody Else\n\nEnglish body text.\n")
+
+	cfg, err := Discover(context.Background(), dir)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+	if cfg.Book.Author != "Jane Doe" {
+		t.Errorf("book author = %q, want the declared \"Jane Doe\" (README inference overwrote it)", cfg.Book.Author)
+	}
+}
+
+// TestReadmeAuthorStillInferredWhenUndeclared keeps the useful half: a project
+// that declares no author still gets one from the README.
+func TestReadmeAuthorStillInferredWhenUndeclared(t *testing.T) {
+	dir := writeGitBookProject(t,
+		`{"title": "Loose Book"}`,
+		"# Loose Book\n\nAuthor: Somebody Else\n\nEnglish body text.\n")
+
+	cfg, err := Discover(context.Background(), dir)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+	if cfg.Book.Author != "Somebody Else" {
+		t.Errorf("book author = %q, want \"Somebody Else\" inferred from the README", cfg.Book.Author)
+	}
+}

@@ -104,6 +104,7 @@ func LoadBookJSON(ctx context.Context, path string) (*BookConfig, error) {
 	}
 	if len(raw.Author) > 0 {
 		cfg.Book.Author = strings.Join(raw.Author, ", ")
+		cfg.markSet("book.author")
 	}
 	if raw.Description != "" {
 		cfg.Book.Description = raw.Description

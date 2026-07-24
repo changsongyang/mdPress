@@ -106,10 +106,17 @@ func Discover(ctx context.Context, dir string) (*BookConfig, error) {
 			if meta.Language != "" && !cfg.IsSet("book.language") {
 				cfg.Book.Language = meta.Language
 			}
-			if meta.Author != "" {
-				cfg.Book.Author = meta.Author
-			} else if cfg.Book.Author == "" {
-				cfg.Book.Author = gitConfigAuthor(ctx, absDir)
+			// The README/git author is inference, not an override. Without
+			// this guard a book.json (or book.yaml) that declared an author
+			// was clobbered by the git-remote owner or a README `Author:` line
+			// on every GitBook-on-GitHub project — the same defaults-as-unset
+			// bug already fixed for version and language just above.
+			if !cfg.IsSet("book.author") {
+				if meta.Author != "" {
+					cfg.Book.Author = meta.Author
+				} else if cfg.Book.Author == "" {
+					cfg.Book.Author = gitConfigAuthor(ctx, absDir)
+				}
 			}
 
 			cfg.detectAuxFiles()
