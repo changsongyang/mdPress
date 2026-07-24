@@ -46,6 +46,16 @@ type searchProbe struct {
 	Empty  string   `json:"empty"`
 }
 
+// crossDepthProbePNG is a minimal valid 1x1 PNG used as a loadable content image.
+var crossDepthProbePNG = []byte{
+	0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+	0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+	0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE, 0x00, 0x00, 0x00,
+	0x0C, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0xF8, 0xFF, 0xFF, 0x3F,
+	0x00, 0x05, 0xFE, 0x02, 0xFE, 0x0D, 0xEF, 0x46, 0xB8, 0x00, 0x00, 0x00,
+	0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+}
+
 // browserTestSite generates the fixture book used by the browser tests.
 func browserTestSite(t *testing.T) string {
 	t.Helper()
@@ -250,6 +260,127 @@ func TestSitePageLoadsSharedAssets(t *testing.T) {
 			t.Errorf("%s: script did not receive the page's active file (active nav %q)", pageURL, state.Active)
 		}
 	}
+}
+
+// TestSiteSPACrossDepthImageResolves guards that a content image loads after an
+// SPA navigation between pages at different directory depths. It is easy to
+// assume the swap resolves the incoming page's relative image URLs against the
+// previous page's base (the URL innerHTML is assigned under), which would 404 a
+// "assets/pic.png" navigated to from a deeper page. In practice the browser
+// defers the image load until after finalizeNavigation's pushState updates the
+// base, so the image resolves against the target page and loads — this test
+// pins that behavior (both directions, and under subdirectory hosting) so a
+// future change to the swap ordering cannot silently break cross-depth images.
+func TestSiteSPACrossDepthImageResolves(t *testing.T) {
+	ctx := newBrowser(t)
+
+	// clickJS clicks the sidebar link ending in %s, waits for the swapped-in
+	// page's #probe image to settle, and reports whether it loaded. __spaMarker
+	// survives a client-side swap but not a full reload, so it also proves the
+	// swap path — not a fallback full navigation — is what ran.
+	clickJS := func(linkSuffix string) string {
+		return `(async function() {
+      window.__spaMarker = 'alive';
+      var link = document.querySelector('.sidebar a[href$="` + linkSuffix + `"]');
+      if (!link) return JSON.stringify({ err: 'no-link' });
+      link.click();
+      var img = null;
+      for (var i = 0; i < 100; i++) {
+        img = document.getElementById('probe');
+        if (img && img.complete && (img.naturalWidth > 0 || img.currentSrc)) break;
+        await new Promise(function(r) { setTimeout(r, 50); });
+      }
+      if (!img) return JSON.stringify({ err: 'no-img' });
+      return JSON.stringify({ natural: img.naturalWidth, currentSrc: img.currentSrc, spa: window.__spaMarker === 'alive' });
+    })()`
+	}
+
+	// probe drives one navigation and returns the settled image state.
+	type imageState struct {
+		Natural    int    `json:"natural"`
+		CurrentSrc string `json:"currentSrc"`
+		SPA        bool   `json:"spa"`
+		Err        string `json:"err"`
+	}
+	probe := func(t *testing.T, startURL, linkSuffix string) imageState {
+		t.Helper()
+		var raw string
+		if err := chromedp.Run(ctx,
+			chromedp.Navigate(startURL),
+			chromedp.WaitReady(".sidebar", chromedp.ByQuery),
+			chromedp.Sleep(500*time.Millisecond),
+			chromedp.Evaluate(clickJS(linkSuffix), &raw, func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
+				return p.WithAwaitPromise(true)
+			}),
+		); err != nil {
+			t.Fatalf("navigation failed: %v", err)
+		}
+		var res imageState
+		if err := json.Unmarshal([]byte(raw), &res); err != nil {
+			t.Fatalf("decode probe %q: %v", raw, err)
+		}
+		if res.Err != "" {
+			t.Fatalf("probe error: %s", res.Err)
+		}
+		if !res.SPA {
+			t.Fatal("navigation fell back to a full reload; the SPA swap path was not exercised")
+		}
+		return res
+	}
+
+	// buildSite writes a three-chapter book with a real root-level asset and one
+	// chapter that carries the #probe image at imgSrc.
+	buildSite := func(t *testing.T, imgChapter SiteChapter) string {
+		t.Helper()
+		dir := t.TempDir()
+		gen := NewSiteGenerator(SiteMeta{Title: "Depth", Language: "en-US"})
+		gen.AddChapter(SiteChapter{Title: "Home", Filename: "home.html", Content: "<h1>Home</h1><p>home body.</p>"})
+		gen.AddChapter(imgChapter)
+		gen.AddChapter(SiteChapter{Title: "Deep", Filename: "part/deep.html", Content: "<h1>Deep</h1><p>deep body.</p>"})
+		if err := gen.Generate(dir); err != nil {
+			t.Fatalf("Generate failed: %v", err)
+		}
+		if err := os.MkdirAll(filepath.Join(dir, "assets"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "assets", "pic.png"), crossDepthProbePNG, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return dir
+	}
+
+	t.Run("deeper_to_shallower", func(t *testing.T) {
+		dir := buildSite(t, SiteChapter{Title: "Root Image", Filename: "rootimg.html",
+			Content: `<h1>Root Image</h1><img id="probe" src="assets/pic.png" alt="p">`})
+		srv := httptest.NewServer(http.FileServer(http.Dir(dir)))
+		defer srv.Close()
+		// Start deep (base .../part/), navigate to the root-depth image page.
+		res := probe(t, srv.URL+"/part/deep.html", "rootimg.html")
+		if strings.Contains(res.CurrentSrc, "/part/") {
+			t.Errorf("image fetched from %q (the previous page's base), not root depth", res.CurrentSrc)
+		}
+		if res.Natural == 0 {
+			t.Errorf("image did not load (naturalWidth=0, currentSrc=%q)", res.CurrentSrc)
+		}
+	})
+
+	t.Run("shallower_to_deeper_subdir_hosting", func(t *testing.T) {
+		dir := buildSite(t, SiteChapter{Title: "Deep Image", Filename: "part/deepimg.html",
+			Content: `<h1>Deep Image</h1><img id="probe" src="../assets/pic.png" alt="p">`})
+		// Serve under /repo/ to mimic GitHub Pages project hosting.
+		mux := http.NewServeMux()
+		mux.Handle("/repo/", http.StripPrefix("/repo/", http.FileServer(http.Dir(dir))))
+		srv := httptest.NewServer(mux)
+		defer srv.Close()
+		// Start at the root page, navigate to the deep image page.
+		res := probe(t, srv.URL+"/repo/home.html", "deepimg.html")
+		if !strings.Contains(res.CurrentSrc, "/repo/assets/") {
+			t.Errorf("image fetched from %q, want it under /repo/assets/ (the extra ../ was not clamped)", res.CurrentSrc)
+		}
+		if res.Natural == 0 {
+			t.Errorf("image did not load (naturalWidth=0, currentSrc=%q)", res.CurrentSrc)
+		}
+	})
 }
 
 // TestSiteDarkModeHeadingContrast measures what a reader actually sees: h5 and
