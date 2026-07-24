@@ -5,9 +5,11 @@ on:
     tags:
       - 'v*'
 
+# Default the workflow token to read-only; each job that publishes elevates its
+# own scope (goreleaser, docker). Least privilege keeps read-only jobs like
+# preflight and verify-artifacts from carrying write/packages they never use.
 permissions:
-  contents: write
-  packages: write
+  contents: read
 
 jobs:
   # Nothing used to compare the pushed tag with the version compiled into the
@@ -17,6 +19,8 @@ jobs:
   preflight:
     name: Check tag matches the source version
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -138,6 +142,10 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     needs: goreleaser
+    # Pushing images to ghcr.io needs packages:write; checkout needs read.
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
