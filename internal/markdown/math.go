@@ -158,6 +158,25 @@ func (m *mathPreprocessor) substituteMath(src string) string {
 	})
 }
 
+// restorePlainText replaces math placeholder tokens with their original
+// $...$ / $$...$$ source. It is the plain-text counterpart to postprocess:
+// where postprocess restores placeholders inside rendered HTML (as KaTeX
+// spans), this restores them inside plain-text contexts — a heading's text and
+// the slug derived from it — which otherwise carried the raw MDPMATH… token
+// into every table of contents, sidebar entry, and anchor id.
+func (m *mathPreprocessor) restorePlainText(s string) string {
+	if !strings.Contains(s, "MDPMATH") {
+		return s
+	}
+	for i, content := range m.blocks {
+		s = strings.ReplaceAll(s, fmt.Sprintf(mathBlockFmt, i), "$$"+content+"$$")
+	}
+	for i, content := range m.inlines {
+		s = strings.ReplaceAll(s, fmt.Sprintf(mathInlineFmt, i), "$"+content+"$")
+	}
+	return s
+}
+
 // splitLinesKeepEndings splits s into lines, keeping each line's trailing "\n"
 // (the final line has no newline unless the source ends with one). This lets
 // preprocess reassemble the source without altering line endings.

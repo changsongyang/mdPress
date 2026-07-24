@@ -5,6 +5,48 @@ import (
 	"testing"
 )
 
+// TestMathInHeadingRestoredInNavAndID pins that math in a heading does not leak
+// the MDPMATH… placeholder into the heading text (shown in every ToC/sidebar)
+// or into the anchor id, and that the id the body carries matches HeadingInfo.ID
+// so internal navigation still works — including the uniqueness suffix on a
+// repeated heading.
+func TestMathInHeadingRestoredInNavAndID(t *testing.T) {
+	p := NewParser()
+	src := "## Energy $E=mc^2$ formula\n\nBody.\n\n## Energy $E=mc^2$ formula\n"
+	html, headings, err := p.Parse([]byte(src))
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if len(headings) != 2 {
+		t.Fatalf("expected 2 headings, got %d", len(headings))
+	}
+
+	wantText := "Energy $E=mc^2$ formula"
+	wantIDs := []string{"energy-emc2-formula", "energy-emc2-formula-2"}
+	for i, h := range headings {
+		if strings.Contains(h.Text, "MDPMATH") {
+			t.Errorf("heading %d text leaks a math placeholder: %q", i, h.Text)
+		}
+		if h.Text != wantText {
+			t.Errorf("heading %d text = %q, want %q", i, h.Text, wantText)
+		}
+		if strings.Contains(h.ID, "mdpmath") {
+			t.Errorf("heading %d id leaks a math placeholder: %q", i, h.ID)
+		}
+		if h.ID != wantIDs[i] {
+			t.Errorf("heading %d id = %q, want %q", i, h.ID, wantIDs[i])
+		}
+		// The body must carry the same id so ToC/sidebar links resolve.
+		if !strings.Contains(html, `id="`+h.ID+`"`) {
+			t.Errorf("body HTML is missing id %q that HeadingInfo reports:\n%s", h.ID, html)
+		}
+	}
+	// The body math still renders as a KaTeX span.
+	if !strings.Contains(html, `<span class="math math-inline">$E=mc^2$</span>`) {
+		t.Errorf("body math span not rendered: %s", html)
+	}
+}
+
 func TestMathPreprocessorBlockMath(t *testing.T) {
 	m := newMathPreprocessor()
 	input := "Before\n$$E = mc^2$$\nAfter"

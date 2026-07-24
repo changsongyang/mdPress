@@ -13,6 +13,10 @@ import (
 	"github.com/yuin/goldmark/text"
 )
 
+// identityRestore is the no-op restore used by processHeading tests that
+// exercise headings without math placeholders.
+func identityRestore(s string) string { return s }
+
 // ---------------------------------------------------------------------------
 // Test helper: createHeadingNode
 // ---------------------------------------------------------------------------
@@ -49,7 +53,7 @@ func TestHeadingIDTransformer_ProcessHeading_SingleHeading(t *testing.T) {
 	heading := createHeadingNode(1, "Test Heading", source)
 
 	usedIDs := make(map[string]int)
-	processHeading(heading, source, usedIDs)
+	processHeading(heading, source, usedIDs, identityRestore)
 
 	id, ok := heading.AttributeString("id")
 	if !ok {
@@ -66,7 +70,7 @@ func TestHeadingIDTransformer_ProcessHeading_EmptyHeading(t *testing.T) {
 	source := []byte("")
 
 	usedIDs := make(map[string]int)
-	processHeading(heading, source, usedIDs)
+	processHeading(heading, source, usedIDs, identityRestore)
 
 	// Empty heading should not set ID (no text to extract)
 	// This is handled by extractNodeText returning empty string
@@ -85,7 +89,7 @@ func TestHeadingIDTransformer_ProcessHeading_PreexistingID(t *testing.T) {
 	heading.SetAttributeString("id", []byte("custom-id"))
 
 	usedIDs := make(map[string]int)
-	processHeading(heading, source, usedIDs)
+	processHeading(heading, source, usedIDs, identityRestore)
 
 	id, ok := heading.AttributeString("id")
 	if !ok {
@@ -301,8 +305,8 @@ func TestHeadingIDTransformer_Transform_Integration(t *testing.T) {
 	source := []byte("First Heading\nSecond Heading")
 	heading1 := createHeadingNode(1, "First Heading", source)
 	heading2 := createHeadingNode(2, "Second Heading", source)
-	processHeading(heading1, source, usedIDs)
-	processHeading(heading2, source, usedIDs)
+	processHeading(heading1, source, usedIDs, identityRestore)
+	processHeading(heading2, source, usedIDs, identityRestore)
 
 	// Verify both got IDs
 	id1, ok1 := heading1.AttributeString("id")

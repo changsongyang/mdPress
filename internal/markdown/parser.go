@@ -145,14 +145,27 @@ func (p *Parser) ParseWithDiagnostics(source []byte) (string, []HeadingInfo, []D
 	mathProc := newMathPreprocessor()
 	processedSource := []byte(mathProc.preprocess(string(source)))
 
-	// Parse the pre-processed source into an AST.
+	// Parse the pre-processed source into an AST. The math preprocessor is put
+	// on the parse context so headingIDTransformer can restore math placeholders
+	// before deriving a heading's anchor id — otherwise a heading containing
+	// math ("## Energy $E=mc^2$ formula") slugs to the raw MDPMATH… token.
 	reader := text.NewReader(processedSource)
-	document := p.md.Parser().Parse(reader)
+	pc := parser.NewContext()
+	pc.Set(mathProcContextKey, mathProc)
+	document := p.md.Parser().Parse(reader, parser.WithContext(pc))
 	diagnostics := collectDiagnostics(document, processedSource)
 
 	// Walk the AST to collect heading information using local state
 	// (no shared mutable struct fields) so concurrent Parse calls are safe.
 	headings := p.collectHeadings(document, processedSource, newSourceIndex(processedSource))
+
+	// Restore math placeholders in the collected heading text so tables of
+	// contents and sidebars show the formula source, not the token. The anchor
+	// ids already carry the restored slug: extractHeadingInfo reads the id the
+	// transformer set above, which is derived from the restored text.
+	for i := range headings {
+		headings[i].Text = mathProc.restorePlainText(headings[i].Text)
+	}
 
 	// Render AST to HTML.
 	var buf bytes.Buffer

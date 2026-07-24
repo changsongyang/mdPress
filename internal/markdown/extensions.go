@@ -9,6 +9,12 @@ import (
 	"github.com/yuin/goldmark/text"
 )
 
+// mathProcContextKey carries the per-parse *mathPreprocessor on the goldmark
+// parse context so headingIDTransformer can restore math placeholders before
+// slugifying a heading. Passing it through the context (rather than a struct
+// field) keeps the transformer stateless and safe for concurrent Parse calls.
+var mathProcContextKey = parser.NewContextKey()
+
 // headingIDTransformer auto-generates unique ID attributes for headings.
 // It is safe for concurrent use: each Transform call uses a local map so
 // multiple documents can be parsed in parallel without interference.
@@ -36,6 +42,14 @@ func (t *headingIDTransformer) Transform(node *ast.Document, reader text.Reader,
 		return ast.WalkContinue, nil
 	})
 
+	// A heading may contain math that was replaced with an MDPMATH… placeholder
+	// before parsing; restore it to the formula source so the derived slug reads
+	// from stable characters instead of the token.
+	restore := func(s string) string { return s }
+	if mp, ok := pc.Get(mathProcContextKey).(*mathPreprocessor); ok {
+		restore = mp.restorePlainText
+	}
+
 	// Ids an author wrote as "## Heading {#custom-id}" are claimed before any
 	// slug is derived: the author wrote {#intro} precisely so that links to
 	// #intro land on that heading, so an unrelated heading that happens to
@@ -44,7 +58,7 @@ func (t *headingIDTransformer) Transform(node *ast.Document, reader text.Reader,
 		claimCustomHeadingID(heading, usedIDs)
 	}
 	for _, heading := range headings {
-		processHeading(heading, source, usedIDs)
+		processHeading(heading, source, usedIDs, restore)
 	}
 }
 
@@ -65,13 +79,15 @@ func claimCustomHeadingID(heading *ast.Heading, usedIDs map[string]int) {
 	heading.SetAttributeString("id", []byte(claimUniqueID(string(idBytes), usedIDs)))
 }
 
-// processHeading sets the ID attribute for a single heading node.
-func processHeading(heading *ast.Heading, source []byte, usedIDs map[string]int) {
+// processHeading sets the ID attribute for a single heading node. restore maps
+// any math placeholder in the heading text back to its formula source before
+// the slug is derived (identity when the document contains no math).
+func processHeading(heading *ast.Heading, source []byte, usedIDs map[string]int, restore func(string) string) {
 	if _, ok := heading.AttributeString("id"); ok {
 		return
 	}
 
-	headingText := extractNodeText(heading, source)
+	headingText := restore(extractNodeText(heading, source))
 	if headingText == "" {
 		return
 	}
