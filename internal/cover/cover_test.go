@@ -516,9 +516,4 @@ func TestIsLightColor(t *testing.T) {
 			t.Errorf("isLightColor(%q) = %v, want %v", tt.color, got, tt.want)
 		}
 	}
-
-	// The exported wrapper must agree with the internal implementation.
-	if !IsLightColor("white") || IsLightColor("navy") {
-		t.Error("IsLightColor should classify 'white' as light and 'navy' as dark")
-	}
 }

@@ -377,16 +377,11 @@ var namedColorLight = map[string]bool{
 	"darkblue": false, "darkslategray": false, "darkslategrey": false,
 }
 
-// IsLightColor reports whether the given CSS color is perceptually light.
+// isLightColor reports whether the given CSS color is perceptually light.
 // It understands hex colors (#rgb, #rgba, #rrggbb, #rrggbbaa), common named
 // CSS colors, and numeric rgb()/rgba() forms. Unknown or unparseable formats
 // are assumed dark so that light text remains the safer default. Alpha
 // channels are ignored.
-func IsLightColor(color string) bool {
-	return isLightColor(color)
-}
-
-// isLightColor is the internal implementation behind IsLightColor.
 func isLightColor(color string) bool {
 	color = strings.TrimSpace(color)
 	if strings.HasPrefix(color, "#") {
