@@ -920,7 +920,10 @@ func (g *Generator) generateFromSource(ctx context.Context, src documentSource, 
 	pdfBuf = g.clearCoverHeaderFooter(pdfBuf)
 	pdfBuf = g.stampMetadata(pdfBuf)
 
-	if err := os.WriteFile(outputPath, pdfBuf, 0o644); err != nil {
+	// Atomic write: a partial write on a full volume must not truncate a
+	// previously good PDF at outputPath (this error path skips the
+	// cancellation-cleanup, so a corrupt file would otherwise be left in place).
+	if err := utils.WriteFileAtomic(outputPath, pdfBuf, 0o644); err != nil {
 		return fmt.Errorf("failed to write PDF file: %w", err)
 	}
 
@@ -1180,7 +1183,9 @@ func (g *Generator) stampMetadataFile(path string) {
 	if len(stamped) == len(data) && bytes.Equal(stamped, data) {
 		return
 	}
-	if err := os.WriteFile(path, stamped, 0o644); err != nil {
+	// Atomic rewrite: on failure the already-written, valid (un-stamped) PDF is
+	// left in place rather than truncated.
+	if err := utils.WriteFileAtomic(path, stamped, 0o644); err != nil {
 		slog.Debug("Failed to write PDF metadata", slog.Any("error", err))
 	}
 }

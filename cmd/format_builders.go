@@ -359,7 +359,8 @@ func (b *htmlBuilder) Build(ctx context.Context, bc *buildContext, baseName stri
 	if err := utils.EnsureDir(filepath.Dir(outputPath)); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
-	if err := os.WriteFile(outputPath, []byte(standaloneHTML), 0o644); err != nil {
+	// Atomic write so a failed write never truncates a previously good HTML file.
+	if err := utils.WriteFileAtomic(outputPath, []byte(standaloneHTML), 0o644); err != nil {
 		return fmt.Errorf("failed to write HTML file: %w", err)
 	}
 	bc.Logger.Info("Output ready", slog.String("format", "HTML"), slog.String("path", outputPath))

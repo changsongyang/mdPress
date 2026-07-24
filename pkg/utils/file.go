@@ -22,6 +22,42 @@ func FileExists(path string) bool {
 	return err == nil
 }
 
+// WriteFileAtomic writes data to path via a temp file in the same directory
+// that is then renamed into place, so a failed or interrupted write can never
+// replace an existing good file at path with a truncated or empty one. Unlike
+// os.WriteFile, which opens the destination with O_TRUNC before writing, a
+// write error here (ENOSPC, a quota, an NFS error on close) leaves the original
+// file untouched and removes the temp file. The rename is atomic on a single
+// filesystem, which the same-directory temp guarantees.
+func WriteFileAtomic(path string, data []byte, perm os.FileMode) error {
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, ".mdpress-tmp-*")
+	if err != nil {
+		return fmt.Errorf("create temp file for %q: %w", path, err)
+	}
+	tmpName := tmp.Name()
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("write temp file for %q: %w", path, err)
+	}
+	if err := tmp.Close(); err != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("close temp file for %q: %w", path, err)
+	}
+	// os.CreateTemp makes the file 0600; apply the requested mode before it
+	// becomes visible under the final name.
+	if err := os.Chmod(tmpName, perm); err != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("chmod temp file for %q: %w", path, err)
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		_ = os.Remove(tmpName)
+		return fmt.Errorf("rename temp file into %q: %w", path, err)
+	}
+	return nil
+}
+
 // EnsureDir creates a directory when it does not already exist.
 // MkdirAll is idempotent, so we call it directly to avoid a TOCTOU race.
 func EnsureDir(path string) error {

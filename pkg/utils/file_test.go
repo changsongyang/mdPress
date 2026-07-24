@@ -695,3 +695,49 @@ func TestParseVersionPart(t *testing.T) {
 		})
 	}
 }
+
+// TestWriteFileAtomic verifies atomic writes create and overwrite files with
+// the right content and mode, and leave no temp files behind.
+func TestWriteFileAtomic(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "out.bin")
+
+	// Create.
+	if err := WriteFileAtomic(path, []byte("first"), 0o644); err != nil {
+		t.Fatalf("WriteFileAtomic create: %v", err)
+	}
+	if got, _ := os.ReadFile(path); string(got) != "first" {
+		t.Errorf("content = %q, want %q", got, "first")
+	}
+
+	// Overwrite an existing file.
+	if err := WriteFileAtomic(path, []byte("second-longer"), 0o600); err != nil {
+		t.Fatalf("WriteFileAtomic overwrite: %v", err)
+	}
+	if got, _ := os.ReadFile(path); string(got) != "second-longer" {
+		t.Errorf("content after overwrite = %q, want %q", got, "second-longer")
+	}
+	if runtime.GOOS != "windows" {
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Mode().Perm() != 0o600 {
+			t.Errorf("mode = %v, want 0600", info.Mode().Perm())
+		}
+	}
+
+	// No temp files left behind.
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if strings.HasPrefix(e.Name(), ".mdpress-tmp-") {
+			t.Errorf("leftover temp file: %s", e.Name())
+		}
+	}
+	if len(entries) != 1 {
+		t.Errorf("expected exactly one file in dir, got %d", len(entries))
+	}
+}
