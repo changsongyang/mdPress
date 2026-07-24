@@ -1051,6 +1051,26 @@ func TestGenerateImageDocumentGolden(t *testing.T) {
 	}
 }
 
+// TestGenerateEscapedDollarCompiles is the compile-level regression for the
+// backslash-escaping fix: a chapter whose prose contains the spec-valid
+// CommonMark escape `\$` used to emit `\\$`, which Typst reads as a literal
+// backslash plus an unclosed math delimiter, aborting the whole document with
+// "error: unclosed delimiter". It is skipped when the typst binary is absent.
+func TestGenerateEscapedDollarCompiles(t *testing.T) {
+	if err := checkTypstAvailable(context.Background()); err != nil {
+		t.Skipf("typst not available: %v", err)
+	}
+	gen := NewGenerator(WithTitle("Escaped Dollar"))
+	md := "# Bill\n\nYou owe me \\$100, and a raw \\` backtick too.\n"
+	out := filepath.Join(t.TempDir(), "out.pdf")
+	if err := gen.Generate(context.Background(), md, out); err != nil {
+		t.Fatalf("Generate with escaped dollar failed to compile: %v", err)
+	}
+	if info, err := os.Stat(out); err != nil || info.Size() == 0 {
+		t.Fatalf("expected a non-empty PDF at %s: err=%v", out, err)
+	}
+}
+
 // TestGenerateValidation tests Generate function parameter validation
 func TestGenerateValidation(t *testing.T) {
 	gen := NewGenerator()

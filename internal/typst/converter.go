@@ -144,10 +144,13 @@ func (c *MarkdownToTypstConverter) Convert(markdown string) string {
 			continue
 		}
 
-		// Handle horizontal rules
+		// Handle horizontal rules. Emit an explicit Typst rule: the literal
+		// "---" would be rendered as an em dash by Typst's smart-punctuation,
+		// turning a thematic break into a stray dash paragraph instead of a
+		// divider. "***"/"___" reach here through isHorizontalRule too.
 		if isHorizontalRule(line) {
 			flushParagraph()
-			result.WriteString("---\n\n")
+			result.WriteString("#line(length: 100%)\n\n")
 			continue
 		}
 
@@ -205,9 +208,19 @@ func (c *MarkdownToTypstConverter) convertInline(text string) string {
 }
 
 // typstProseReplacer escapes Typst control characters that appear in ordinary
-// prose and would otherwise break compilation ($, #, @, <, >, `). It
+// prose and would otherwise break compilation (\, $, #, @, <, >, `). It
 // deliberately does NOT touch '*' or '_' (used for bold/italic conversion) or
 // brackets/parens.
+//
+// The backslash rule comes first and matters most: a backslash already present
+// in the prose (e.g. the CommonMark escape "\$", the spec-valid way to write a
+// literal dollar) would otherwise combine with the escape we add for the next
+// character. strings.NewReplacer scans left to right without re-processing its
+// own output, so "\$" becomes "\\\$" — Typst reads that as a literal backslash
+// followed by a literal dollar. Without this rule "\$" became "\\$", where
+// Typst reads "\\" as a literal backslash and the trailing "$" as an unclosed
+// math delimiter, aborting compilation of the whole document; "\`" broke the
+// same way via an unclosed raw block.
 //
 // Backticks are escaped here even though matched code spans are extracted
 // upstream: an UNMATCHED backtick run still reaches prose escaping (e.g. the
@@ -216,6 +229,7 @@ func (c *MarkdownToTypstConverter) convertInline(text string) string {
 // rest of the document — the compile then fails with "unclosed raw text". A
 // literal backtick in Typst is written "\`".
 var typstProseReplacer = strings.NewReplacer(
+	"\\", "\\\\",
 	"$", "\\$",
 	"#", "\\#",
 	"@", "\\@",

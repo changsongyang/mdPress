@@ -338,9 +338,15 @@ func TestConvertHorizontalRules(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := converter.Convert(tt.input)
-			hasRule := strings.Contains(result, "---")
+			// A thematic break must emit an explicit Typst rule, never the
+			// literal "---" (which Typst smart-punctuation renders as an em
+			// dash instead of a divider).
+			hasRule := strings.Contains(result, "#line(length: 100%)")
 			if hasRule != tt.expected {
 				t.Errorf("expected rule presence=%v, got %q", tt.expected, result)
+			}
+			if tt.expected && strings.Contains(result, "---") {
+				t.Errorf("thematic break emitted literal \"---\" (renders as em dash): %q", result)
 			}
 		})
 	}
@@ -731,7 +737,7 @@ Here's a [link](https://example.com) and an image:
 		"```python",
 		"- Item 1",
 		"> A quote here",
-		"---",
+		"#line(length: 100%)", // thematic break -> explicit Typst rule, not "---"
 		"+ First",
 	}
 
@@ -884,6 +890,43 @@ func TestEdgeCasesWithSpecialCharacters(t *testing.T) {
 				t.Errorf("expected non-empty result for input %q", tt.input)
 			}
 		})
+	}
+}
+
+// TestTypstProseEscapesBackslash pins the escaping of a backslash that precedes
+// a Typst-special character. The CommonMark escape `\$` (the spec-valid way to
+// write a literal dollar) must not degrade into `\\$`, which Typst reads as a
+// literal backslash followed by an unclosed math delimiter — a whole-document
+// compile failure. See internal/typst/converter.go typstProseReplacer.
+func TestTypstProseEscapesBackslash(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		// `\$` -> literal backslash + literal dollar: `\\` then `\$`.
+		{"escaped dollar", `\$`, `\\\$`},
+		// `\` + backtick: `\\` then `` \` ``.
+		{"escaped backtick", "\\`", "\\\\\\`"},
+		// A lone backslash is doubled so Typst renders it literally.
+		{"lone backslash", `\`, `\\`},
+		// Backslash before a non-special char: only the backslash is escaped.
+		{"backslash before letter", `\n`, `\\n`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := escapeTypstProse(tt.in); got != tt.want {
+				t.Errorf("escapeTypstProse(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+
+	// End-to-end: a prose sentence with an escaped dollar must not emit the
+	// broken `\\$` sequence that opens unclosed math mode.
+	conv := &MarkdownToTypstConverter{}
+	out := conv.Convert(`You owe me \$100.`)
+	if !strings.Contains(out, `\\\$100`) {
+		t.Errorf("expected escaped `\\\\\\$100` in output, got %q", out)
 	}
 }
 
